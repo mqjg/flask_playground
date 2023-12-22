@@ -1,4 +1,8 @@
 from flask import Flask, render_template, request
+from flower_classification.predict import ImageClassifier
+import os
+
+uploads_path = 'uploads'
  
 # Generate a flask object
 app = Flask(__name__)
@@ -71,14 +75,27 @@ def squarenumber2():
     if request.method == 'GET':
         return render_template("squarenum2.html")
 
+model_path = 'flower_classification/model_0.hdf5'
+labels_path = 'flower_classification/model_0_labels.pickle'
+model = ImageClassifier(model_path, labels_path)
+
 @app.route('/flower_classification', methods=['GET', 'POST'])
 def flower_classification():
  # If method is POST, get the number entered by user
  # Calculate the square of number and pass it to answermaths 
     if request.method == 'POST':
         f = request.files['file'] 
-        f.save(f.filename)
-        return render_template("upload_file_acknowledge.html",name =f.filename)  
+        if not os.path.exists(uploads_path):
+            os.makedirs(uploads_path)
+
+        img_path = os.path.join(uploads_path, f.filename)
+        f.save(img_path)
+        label, score = model.predict(img_path)
+        print(f"\nModel predicted \"{label}\" with a confidence of \
+               {score: .3f}\n")
+
+        return render_template("image_classification_results.html",
+                               name=f.filename, label=label, score=score)  
     # If the method is GET,render the HTML page to the user
     if request.method == 'GET':
         return render_template("upload_file.html")
